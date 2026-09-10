@@ -12,31 +12,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="حضور المصنع">
     <link rel="apple-touch-icon" href="logo.png">
-    <link rel="icon" type="image/png" href="logo.png"><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>">
+    <link rel="icon" type="image/png" href="logo.png">
 
-    <!-- Fonts -->
+    <!-- Preconnect for instant font loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Cairo', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: '#1a73e8',
-                        success: '#0f9d58',
-                        danger: '#d93025',
-                        warning: '#f9ab00',
-                        bg: '#f8f9fa'
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Compiled Static Tailwind CSS (Zero external JS delay) -->
+    <link rel="stylesheet" href="style.css">
 
     <style>
         body {
@@ -437,6 +421,13 @@
             { name: "طارق عبدالله", code: "107", email: "worker7@gmail.com", department: "الإنتاج" },
             { name: "سامي يوسف", code: "108", email: "worker8@gmail.com", department: "الجودة" }
         ];
+
+                // Register Service Worker for instant offline caching & fast loads
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration:', err));
+            });
+        }
 
         // Initialization
         document.addEventListener('DOMContentLoaded', () => {
