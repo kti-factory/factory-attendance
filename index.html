@@ -590,7 +590,7 @@
             syncWorkerRecords(false);
         }
 
-        async function syncWorkerRecords(isUserTriggered = false) {
+                        async function syncWorkerRecords(isUserTriggered = false) {
             if (!currentUser || !APPS_SCRIPT_URL) return;
 
             const syncSpinner = document.getElementById('sync-spinner');
@@ -602,48 +602,58 @@
             }
 
             try {
+                let serverConnected = false;
                 let records = [];
                 try {
-                    const url = `${APPS_SCRIPT_URL}?action=getWorkerAttendance&code=${encodeURIComponent(currentUser.code)}`;
+                    const url = APPS_SCRIPT_URL + '?action=getWorkerAttendance&code=' + encodeURIComponent(currentUser.code);
                     const response = await fetch(url);
                     if (response.ok) {
                         const result = await response.json();
                         records = Array.isArray(result) ? result : (result.data || []);
+                        serverConnected = true;
                     }
                 } catch (err) {
                     console.warn('getWorkerAttendance failed, trying fallback...', err);
                 }
 
-                if (!records || records.length === 0) {
-                    const fallbackUrl = `${APPS_SCRIPT_URL}?action=getAttendanceLogs`;
-                    const response = await fetch(fallbackUrl);
-                    if (response.ok) {
-                        const result = await response.json();
-                        const allRecords = Array.isArray(result) ? result : (result.data || []);
-                        records = allRecords.filter(r => String(r.code) === String(currentUser.code));
+                if (!serverConnected || !records || records.length === 0) {
+                    try {
+                        const fallbackUrl = APPS_SCRIPT_URL + '?action=getAttendanceLogs';
+                        const response = await fetch(fallbackUrl);
+                        if (response.ok) {
+                            const result = await response.json();
+                            const allRecords = Array.isArray(result) ? result : (result.data || []);
+                            records = allRecords.filter(r => String(r.code) === String(currentUser.code));
+                            serverConnected = true;
+                        }
+                    } catch (err) {
+                        console.warn('Fallback failed:', err);
                     }
                 }
 
-                if (records && records.length > 0) {
-                    const mergedRecords = records.map(record => {
-                        let dateStr = record.datetime || record.Timestamp || '';
-                        let d = new Date(dateStr);
-                        if (isNaN(d.getTime())) d = new Date();
+                if (serverConnected) {
+                    if (records && records.length > 0) {
+                        const mergedRecords = records.map(record => {
+                            let dateStr = record.datetime || record.Timestamp || '';
+                            let d = new Date(dateStr);
+                            if (isNaN(d.getTime())) d = new Date();
 
-                        return {
-                            type: record.type,
-                            time: d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-                            status: record.status,
-                            distance: record.distance || 0,
-                            date: d.toLocaleDateString()
-                        };
-                    });
+                            return {
+                                type: record.type,
+                                time: d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+                                status: record.status,
+                                distance: record.distance || 0,
+                                date: d.toLocaleDateString()
+                            };
+                        });
 
-                    // Update local records keeping max 50
-                    let allRecords = JSON.parse(localStorage.getItem('factory_records') || '[]');
-                    mergedRecords.sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
-                    const finalRecords = mergedRecords.slice(0, 50);
-                    localStorage.setItem('factory_records', JSON.stringify(finalRecords));
+                        mergedRecords.sort((a, b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+                        const finalRecords = mergedRecords.slice(0, 50);
+                        localStorage.setItem('factory_records', JSON.stringify(finalRecords));
+                    } else {
+                        // Google Sheets is empty or records were deleted!
+                        localStorage.setItem('factory_records', JSON.stringify([]));
+                    }
                     renderRecords();
                 }
 
